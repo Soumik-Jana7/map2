@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Interactive Google Map with Search & Marker</title>
+    <style>
+      #map {
+        height: 500px; /* Set the map height to 500px */
+        width: 100%;   /* The width of the map should take full width */
+        border: 2px solid #ddd;
+        border-radius: 8px;
+      }
+      #searchBox {
+        width: 100%;
+        max-width: 400px;
+        padding: 10px;
+        font-size: 16px;
+      }
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .info {
+        margin-top: 20px;
+      }
+      label {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Select Meeting Point on the Map or Search for an Address</h2>
+    <input id="searchBox" type="text" placeholder="Search for a place...">
+    <div id="map"></div>
+    <div class="info">
+      <p>
+        <label>Meeting Point Address:</label>
+        <span id="address"></span>
+      </p>
+      <p>
+        <label>Latitude:</label>
+        <span id="latitude"></span>
+      </p>
+      <p>
+        <label>Longitude:</label>
+        <span id="longitude"></span>
+      </p>
+    </div>
+    <script>
+      let map;
+      let marker;
+      let geocoder;
+      // Function to initialize the Google Map
+      function initMap() {
+        const defaultLocation = { lat: 37.7749, lng: -122.4194 }; // Default to San Francisco
+        // Create the map centered on the default location
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: defaultLocation,
+          zoom: 8,
+        });
+        // Initialize Geocoder
+        geocoder = new google.maps.Geocoder();
+        // Initialize Marker (but make it invisible initially)
+        marker = new google.maps.Marker({
+          map: map,
+          visible: false,
+        });
+        // Add a click event listener on the map to place a marker
+        map.addListener("click", (event) => {
+          const clickedLat = event.latLng.lat();
+          const clickedLng = event.latLng.lng();
+          // Set Latitude and Longitude to HTML elements
+          document.getElementById("latitude").innerText = clickedLat;
+          document.getElementById("longitude").innerText = clickedLng;
+          // Place the marker on the clicked position
+          placeMarker(event.latLng);
+          // Get the address using reverse geocoding
+          getAddress(clickedLat, clickedLng);
+        });
+        // Search Box for Address Input
+        const searchBox = new google.maps.places.SearchBox(document.getElementById("searchBox"));
+        // Bias the SearchBox results towards the current map view.
+        map.addListener("bounds_changed", () => {
+          searchBox.setBounds(map.getBounds());
+        });
+        // Listen for search box selection
+        searchBox.addListener("places_changed", () => {
+          const places = searchBox.getPlaces();
+          if (places.length == 0) {
+            return;
+          }
+          // Get the first place from the results
+          const place = places[0];
+          if (!place.geometry) {
+            console.log("Returned place contains no geometry");
+            return;
+          }
+          // Set the map view to the searched place and place a marker
+          if (place.geometry.location) {
+            map.setCenter(place.geometry.location);
+            map.setZoom(15);
+            // Place marker at the searched location
+            placeMarker(place.geometry.location);
+            // Set Latitude and Longitude in HTML
+            document.getElementById("latitude").innerText = place.geometry.location.lat();
+            document.getElementById("longitude").innerText = place.geometry.location.lng();
+            // Set Address in HTML
+            document.getElementById("address").innerText = place.formatted_address || place.name;
+          }
+        });
+      }
+      // Function to place the marker at the specified position
+      function placeMarker(location) {
+        marker.setPosition(location);
+        marker.setVisible(true);
+      }
+      // Function to get address using Google Maps Geocoder
+      function getAddress(lat, lng) {
+        const location = { lat: lat, lng: lng };
+        geocoder.geocode({ location: location }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            const address = results[0].formatted_address;
+            // Set the address to the HTML element
+            document.getElementById("address").innerText = address;
+          } else {
+            document.getElementById("address").innerText = "Address not found";
+          }
+        });
+      }
+      // Load the Google Maps script
+      function loadGoogleMapsScript() {
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAQB4j28piebvwsV_TT0vnrCy_qLQqfpY4&libraries=places&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+      // Load Google Maps Script after the page is loaded
+      window.onload = loadGoogleMapsScript;
+    </script>
+  </body>
+</html>
